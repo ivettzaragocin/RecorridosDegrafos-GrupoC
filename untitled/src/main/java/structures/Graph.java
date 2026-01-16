@@ -8,6 +8,8 @@ import java.util.*;
  * Representa un grafo utilizando una lista de adyacencia y una matriz de adyacencia.
  * Permite determinar si el grafo es dirigido o no basado en la matriz proporcionada.
  * Además, proporciona métodos para agregar aristas y obtener información sobre el grafo.
+ * Los métodos de recorrido (BFS y DFS) ahora manejan grafos desconectados visitando
+ * todos los componentes conectados.
  * @author Jaime Landázuri
  */
 
@@ -66,7 +68,14 @@ public class Graph {
         }
     }
 
-    // Implementación de BFS que guarda caminos y distancias
+    /**
+     * Implementación de BFS que maneja grafos desconectados.
+     * Visita todos los nodos del grafo, iniciando desde startNode y
+     * continuando con nodos no visitados si el grafo tiene componentes desconectados.
+     *
+     * @param startNode Nodo desde el cual iniciar el recorrido
+     * @return Lista con el orden de visita de todos los nodos
+     */
     public List<Integer> bfs(int startNode) {
         List<Integer> traversalOrder = new ArrayList<>();
 
@@ -80,6 +89,27 @@ public class Graph {
         Arrays.fill(distances, -1);
         Arrays.fill(parents, -1);
 
+        // Primer recorrido desde el nodo inicial
+        bfsSingleComponent(startNode, visited, traversalOrder);
+
+        // Buscar nodos no visitados y realizar BFS desde ellos
+        for (int i = 0; i < nVertices; i++) {
+            if (!visited[i]) {
+                bfsSingleComponent(i, visited, traversalOrder);
+            }
+        }
+
+        return traversalOrder;
+    }
+
+    /**
+     * Realiza BFS desde un nodo específico visitando solo su componente conectado.
+     *
+     * @param startNode Nodo desde el cual iniciar
+     * @param visited Array de nodos visitados (compartido entre componentes)
+     * @param traversalOrder Lista para agregar el orden de visita
+     */
+    private void bfsSingleComponent(int startNode, boolean[] visited, List<Integer> traversalOrder) {
         Queue<Integer> queue = new LinkedList<>();
 
         // Configurar nodo inicial
@@ -100,10 +130,16 @@ public class Graph {
                 }
             }
         }
-        return traversalOrder;
     }
 
-
+    /**
+     * Implementación de DFS que maneja grafos desconectados.
+     * Visita todos los nodos del grafo, iniciando desde startNode y
+     * continuando con nodos no visitados si el grafo tiene componentes desconectados.
+     *
+     * @param startNode Nodo desde el cual iniciar el recorrido
+     * @return Lista con el orden de visita de todos los nodos
+     */
     public List<Integer> dfs(int startNode) {
         List<Integer> traversalOrder = new ArrayList<>();
 
@@ -118,11 +154,27 @@ public class Graph {
         Arrays.fill(distances, -1);
         Arrays.fill(parents, -1);
 
-        // Llamada recursiva desde el nodo inicial (profundidad 0)
+        // Primer recorrido desde el nodo inicial
         dfsVisit(startNode, visited, traversalOrder, 0);
+
+        // Buscar nodos no visitados y realizar DFS desde ellos
+        for (int i = 0; i < nVertices; i++) {
+            if (!visited[i]) {
+                dfsVisit(i, visited, traversalOrder, 0);
+            }
+        }
+
         return traversalOrder;
     }
 
+    /**
+     * Método auxiliar recursivo para DFS.
+     *
+     * @param u Nodo actual
+     * @param visited Array de nodos visitados
+     * @param traversalOrder Lista para agregar el orden de visita
+     * @param depth Profundidad actual en el árbol DFS
+     */
     private void dfsVisit(int u, boolean[] visited, List<Integer> traversalOrder, int depth) {
         visited[u] = true;
         distances[u] = depth;
@@ -136,12 +188,69 @@ public class Graph {
         }
     }
 
+    /**
+     * Cuenta el número de componentes conectados en el grafo.
+     * Útil para verificar si el grafo está desconectado.
+     *
+     * @return Número de componentes conectados
+     */
+    public int countConnectedComponents() {
+        boolean[] visited = new boolean[nVertices];
+        int components = 0;
 
+        for (int i = 0; i < nVertices; i++) {
+            if (!visited[i]) {
+                components++;
+                if (isDirected) {
+                    // Para grafos dirigidos, usar DFS simple
+                    dfsComponentCount(i, visited);
+                } else {
+                    // Para grafos no dirigidos, usar BFS simple
+                    bfsComponentCount(i, visited);
+                }
+            }
+        }
+        return components;
+    }
+
+    /**
+     * auxiliar para contar componentes usando DFS.
+     */
+    private void dfsComponentCount(int node, boolean[] visited) {
+        visited[node] = true;
+        for (int neighbor : adjList.get(node)) {
+            if (!visited[neighbor]) {
+                dfsComponentCount(neighbor, visited);
+            }
+        }
+    }
+
+    /**
+     * auxiliar para contar componentes usando BFS.
+     */
+    private void bfsComponentCount(int startNode, boolean[] visited) {
+        Queue<Integer> queue = new LinkedList<>();
+        visited[startNode] = true;
+        queue.add(startNode);
+
+        while (!queue.isEmpty()) {
+            int u = queue.poll();
+            for (int v : adjList.get(u)) {
+                if (!visited[v]) {
+                    visited[v] = true;
+                    queue.add(v);
+                }
+            }
+        }
+    }
 
     public int getnVertices() { return nVertices; }
+    public int[] getDistances() { return distances; }
+    public int[] getParents() { return parents; }
     public boolean isDirected() { return isDirected; }
     public List<List<Integer>> getAdjList() { return adjList; }
     public int[][] getMatrix() { return matrix; }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -155,5 +264,4 @@ public class Graph {
         }
         return sb.toString();
     }
-
 }
